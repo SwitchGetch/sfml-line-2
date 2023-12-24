@@ -1,12 +1,11 @@
-﻿#include <iostream>
+#include <iostream>
 #include <SFML/Graphics.hpp>
 #include <cmath>
-#include <random>
-#include <thread>
-#include <chrono>
 using namespace std;
 using namespace sf;
-using namespace chrono;
+
+#define RadToDeg 180 / 3.1415926
+#define DegToRad 3.1415926 / 180
 
 double length(Vector2f first, Vector2f second)
 {
@@ -19,15 +18,15 @@ void oneLine(RenderWindow& window, RectangleShape& line, RectangleShape object)
 
 	line.setSize(Vector2f(length(line.getPosition(), object.getPosition()), 1));
 
-	line.setRotation((180 / 3.1415926) * acos(abs(line.getPosition().x - object.getPosition().x) / line.getSize().x));
+	line.setRotation(RadToDeg * acos(abs(line.getPosition().x - object.getPosition().x) / line.getSize().x));
 }
 
 void allLines(RenderWindow& window, RectangleShape& line1, RectangleShape& line2, RectangleShape& line3, RectangleShape& line4, RectangleShape object)
 {
-	line1.setPosition(Vector2f(Mouse::getPosition().x - window.getPosition().x - 7, Mouse::getPosition().y - window.getPosition().y - 30));
-	line2.setPosition(Vector2f(Mouse::getPosition().x - window.getPosition().x - 7, Mouse::getPosition().y - window.getPosition().y - 30));
-	line3.setPosition(Vector2f(Mouse::getPosition().x - window.getPosition().x - 7, Mouse::getPosition().y - window.getPosition().y - 30));
-	line4.setPosition(Vector2f(Mouse::getPosition().x - window.getPosition().x - 7, Mouse::getPosition().y - window.getPosition().y - 30));
+	line1.setPosition((Vector2f)Mouse::getPosition(window));
+	line2.setPosition((Vector2f)Mouse::getPosition(window));
+	line3.setPosition((Vector2f)Mouse::getPosition(window));
+	line4.setPosition((Vector2f)Mouse::getPosition(window));
 
 	line1.setSize(Vector2f(length(line1.getPosition(), object.getPosition()), 2));
 	line2.setSize(Vector2f(length(line2.getPosition(), Vector2f(object.getPosition().x + object.getSize().x, object.getPosition().y)), 2));
@@ -44,10 +43,10 @@ void allLines(RenderWindow& window, RectangleShape& line1, RectangleShape& line2
 	double tan3 = side3.y / side3.x;
 	double tan4 = side4.y / side4.x;
 
-	double angle1 = (180 / 3.1415926) * atan(tan1);
-	double angle2 = (180 / 3.1415926) * atan(tan2);
-	double angle3 = (180 / 3.1415926) * atan(tan3);
-	double angle4 = (180 / 3.1415926) * atan(tan4);
+	double angle1 = RadToDeg * atan(tan1);
+	double angle2 = RadToDeg * atan(tan2);
+	double angle3 = RadToDeg * atan(tan3);
+	double angle4 = RadToDeg * atan(tan4);
 
 	if (line1.getPosition().x >= object.getPosition().x) angle1 += 180;
 	if (line2.getPosition().x >= object.getPosition().x + object.getSize().x) angle2 += 180;
@@ -59,22 +58,25 @@ void allLines(RenderWindow& window, RectangleShape& line1, RectangleShape& line2
 	line3.setRotation(angle3);
 	line4.setRotation(angle4);
 
-	line1.setSize(Vector2f(line1.getSize().x + window.getSize().x, 1));
-	line2.setSize(Vector2f(line2.getSize().x + window.getSize().x, 1));
-	line3.setSize(Vector2f(line3.getSize().x + window.getSize().x, 1));
-	line4.setSize(Vector2f(line4.getSize().x + window.getSize().x, 1));
+	/*line1.setSize(Vector2f(line1.getSize().x + window.getSize().x, 2));
+	line2.setSize(Vector2f(line2.getSize().x + window.getSize().x, 2));
+	line3.setSize(Vector2f(line3.getSize().x + window.getSize().x, 2));
+	line4.setSize(Vector2f(line4.getSize().x + window.getSize().x, 2));*/
 }
 
 int main()
 {
-	int winX = 800, winY = 600;
+	int winX = 1000, winY = 750;
 
 	RenderWindow window(VideoMode(winX, winY), "My window");
 	window.setFramerateLimit(60);
 
-	RectangleShape object(Vector2f(100, 100));
+	RectangleShape object(Vector2f(190, 140));
 	object.setPosition(Vector2f((winX - object.getSize().x) / 2, (winY - object.getSize().y) / 2));
-	object.setFillColor(Color::White);
+	object.setFillColor(Color(194, 194, 194));
+
+	Vector2f speed_direction(1, 1);
+	double speed_module = 1;
 
 	RectangleShape line1, line2, line3, line4;
 
@@ -85,6 +87,7 @@ int main()
 
 	Font font;
 	Text text;
+	bool stats_output = false;
 
 	font.loadFromFile("arial.ttf");
 
@@ -101,17 +104,24 @@ int main()
 			{
 				window.close();
 			}
+
+			if (event.type == Event::KeyPressed)
+			{
+				switch (event.key.scancode)
+				{
+				case Keyboard::Scancode::D:
+
+					stats_output = (stats_output ? false : true);
+
+					break;
+				}
+			}
 		}
 
 		window.clear(sf::Color::Black);
 
-		string text_str =
-			"x: " + to_string(Mouse::getPosition().x) + "\n" +
-			"y: " + to_string(Mouse::getPosition().y) + "\n";
 
 		allLines(window, line1, line2, line3, line4, object);
-
-		text.setString(text_str);
 
 		window.draw(object);
 
@@ -120,8 +130,46 @@ int main()
 		window.draw(line3);
 		window.draw(line4);
 
-		window.draw(text);
+		if (stats_output)
+		{
+			string text_str =
+				"mouse:\nx: " + to_string(Mouse::getPosition().x) + "\n" +
+				"y: " + to_string(Mouse::getPosition().y) + "\n" +
+				"object:\nx: " + to_string(object.getPosition().x) + "\n" +
+				"y: " + to_string(object.getPosition().y) + "\n" +
+				"speed direction:\nx: " + to_string(speed_direction.x) + "\n" +
+				"y: " + to_string(speed_direction.y) + "\n" +
+				"speed module: " + to_string(speed_module) + "\n" +
+				"object points:\n";
+
+			for (int i = 0; i < object.getPointCount(); i++)
+			{
+				text_str += to_string(object.getPosition().x + object.getPoint(i).x) + " " + to_string(object.getPosition().y + object.getPoint(i).y) + "\n";
+			}
+
+			text.setString(text_str);
+
+			window.draw(text);
+		}
 
 		window.display();
+
+
+		for (int i = 0; i < (int)speed_module; i++)
+		{
+			object.move(speed_direction);
+
+			if (
+				object.getPosition().x <= 0 || object.getPosition().x + object.getSize().x >= winX ||
+				object.getPosition().y <= 0 || object.getPosition().y + object.getSize().y >= winY
+				)
+			{
+				if (object.getPosition().x <= 0 || object.getPosition().x + object.getSize().x >= winX) speed_direction.x *= -1;
+
+				if (object.getPosition().y <= 0 || object.getPosition().y + object.getSize().y >= winY) speed_direction.y *= -1;
+
+				speed_module += 0.1;
+			}
+		}
 	}
 }
